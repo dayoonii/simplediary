@@ -1,8 +1,10 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./App.css";
 import DiaryEditor from "./DiaryEditor";
 import DiaryList from "./DiaryList.js";
-import Lifecycle from "./Lifecycle";
+//import Lifecycle from "./Lifecycle";
+
+//https://jsonplaceholder.typicode.com/comments
 
 /* dummyList 데이터 */
 /* const dummyList = [
@@ -37,6 +39,28 @@ const App = () => {
 
   const dataId = useRef(0);
 
+  //API 호출
+  const getData = async () => {
+    const res = await fetch(
+      "https://jsonplaceholder.typicode.com/comments"
+    ).then((res) => res.json());
+
+    const initData = res.slice(0, 20).map((it) => {
+      return {
+        author: it.email,
+        content: it.body,
+        emotion: Math.floor(Math.random() * 5) + 1, // 5로 써도 ㄱㅊ
+        create_date: new Date().getTime(),
+        id: dataId.current++,
+      };
+    });
+    setData(initData);
+  };
+
+  useEffect(() => {
+    getData();
+  }, []);
+
   // data에 새로운 일기를 추가하는 함수
   const onCreate = (author, content, emotion) => {
     const create_date = new Date().getTime();
@@ -69,7 +93,7 @@ const App = () => {
   //렌더
   return (
     <div className="App">
-      <Lifecycle />
+      {/*    <Lifecycle /> */}
       <DiaryEditor onCreate={onCreate} />
       <DiaryList onEdit={onEdit} onRemove={onRemove} diaryList={data} />
     </div>
