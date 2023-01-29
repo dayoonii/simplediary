@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+} from "react";
 import "./App.css";
 import DiaryEditor from "./DiaryEditor";
 import DiaryList from "./DiaryList.js";
@@ -33,8 +39,58 @@ import DiaryList from "./DiaryList.js";
 ];
  */
 
+/* 상태 변화 처리 함수 
+const [data,setData] = useState();
+onCreate : 데이터 생성 상태 변화 로직 
+onEdit : 데이터 수정 상태 변화 로직
+onRemove : 데이터삭제 상태 변화로직 
+
+컴포넌트에서 상태변화 로직을 분리하자 
+useReducer는  useState를 대체할 수 있는 함수  */
+const reducer = (state, action) => {
+  switch (action.type) {
+    case "INIT": {
+      return action.data;
+    }
+    case "CREATE": {
+      const create_date = new Date().getTime();
+      const newItem = {
+        ...action.data,
+        create_date,
+      };
+      return [newItem, ...state];
+    }
+    case "REMOVE": {
+      return state.filter((it) => it.id !== action.targetId);
+    }
+    case "EDIT": {
+      return state.map((it) =>
+        it.id === action.targetId ? { ...it, content: action.newContent } : it
+      );
+    }
+    default:
+      return state;
+  }
+};
+
+/* 
+컴포넌트 트리에 데이터 공급하기 context 
+provider컴포넌트로 깔끔하게 정리할 수 있음 
+context 생성
+const MyContext = React.createContext(defaultValue);
+-> Context Provider를 통한 데이터 공급 
+<MyCounter.Provider value={전역으로 전달하고자 하는 값}>
+{//이 context안에 위치할 자식 컴포넌트들}
+</MyContext.Provider>
+*/
+export const DiaryStateContext = React.createContext();
+
+export const DiaryDispatchContext = React.createContext();
+
 const App = () => {
-  const [data, setData] = useState([]);
+  //const [data, setData] = useState([]);
+
+  const [data, dispatch] = useReducer(reducer, []);
 
   const dataId = useRef(0);
 
@@ -53,7 +109,7 @@ const App = () => {
         id: dataId.current++,
       };
     });
-    setData(initData);
+    dispatch({ type: "INIT", data: initData });
   };
 
   useEffect(() => {
@@ -61,32 +117,28 @@ const App = () => {
   }, []);
 
   // data에 새로운 일기를 추가하는 함수
-  const onCreate = (author, content, emotion) => {
-    const create_date = new Date().getTime();
-    const newItem = {
-      author,
-      content,
-      emotion,
-      create_date,
-      id: dataId.current,
-    };
+  const onCreate = useCallback((author, content, emotion) => {
+    dispatch({
+      type: "CREATE",
+      data: { author, content, emotion, id: dataId.current },
+    });
     dataId.current += 1;
-    setData([newItem, ...data]);
-  };
+  }, []);
+
   //데이터 삭제하기
-  const onRemove = (targetId) => {
-    const newDiaryList = data.filter((it) => it.id !== targetId);
-    setData(newDiaryList);
-  };
+  const onRemove = useCallback((targetId) => {
+    dispatch({ type: "REMOVE", targetId });
+  }, []);
 
   //수정하기
-  const onEdit = (targetId, newContent) => {
-    setData(
-      data.map((it) =>
-        it.id === targetId ? { ...it, content: newContent } : it
-      )
-    );
-  };
+  const onEdit = useCallback((targetId, newContent) => {
+    dispatch({ type: "EDIT", targetId, newContent });
+  }, []);
+
+  //onCreate, onRemove, onEdit 한번에 묶기
+  const memoizedDispatches = useMemo(() => {
+    return { onCreate, onRemove, onEdit };
+  }, []);
 
   /* 최적화1
 useMemo 연산결과를 재사용하는 방법  
@@ -112,16 +164,20 @@ ex)문제  A
 
   //렌더
   return (
-    <div className="App">
-      {/*    <Lifecycle /> */}
-      {/*   <OptimizeTest /> */}
-      <DiaryEditor onCreate={onCreate} />
-      <div>전체 일기 : {data.length} </div>
-      <div>기분 좋은 일기 개수 : {goodCount} </div>
-      <div>기분 나쁜 일기 개수 : {badCount}</div>
-      <div>기분 좋은 일기 비율 : {goodRatio} </div>
-      <DiaryList onEdit={onEdit} onRemove={onRemove} diaryList={data} />
-    </div>
+    <DiaryStateContext.Provider value={data}>
+      <DiaryDispatchContext.Provider value={memoizedDispatches}>
+        <div className="App">
+          {/*    <Lifecycle /> */}
+          {/*   <OptimizeTest /> */}
+          <DiaryEditor />
+          <div>전체 일기 : {data.length} </div>
+          <div>기분 좋은 일기 개수 : {goodCount} </div>
+          <div>기분 나쁜 일기 개수 : {badCount}</div>
+          <div>기분 좋은 일기 비율 : {goodRatio} </div>
+          <DiaryList />
+        </div>
+      </DiaryDispatchContext.Provider>
+    </DiaryStateContext.Provider>
   );
 };
 

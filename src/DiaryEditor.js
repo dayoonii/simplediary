@@ -1,8 +1,16 @@
-import { useRef, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
+import { DiaryDispatchContext } from "./App";
 
-const DiaryEditor = ({ onCreate }) => {
+const DiaryEditor = () => {
+  const { onCreate } = useContext(DiaryDispatchContext);
+
   //useRef 요소 별로 특정 값을 갖고 싶을 때 특정 DOM에 접근,
   //데이터를 리렌더링 없이 관리 하고 싶을 때 사용 가능, 리랜더링 방지
+
+  /*   useEffect(() => {
+    console.log("DiaryEditor 렌더");
+  }); */
+
   const authorInput = useRef();
   const contentInput = useRef();
 
@@ -84,4 +92,4 @@ const DiaryEditor = ({ onCreate }) => {
     </div>
   );
 };
-export default DiaryEditor;
+export default React.memo(DiaryEditor);

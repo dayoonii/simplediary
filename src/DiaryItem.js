@@ -1,14 +1,9 @@
-import { useRef, useState } from "react";
+import React, { useContext, useRef, useState } from "react";
+import { DiaryDispatchContext } from "./App";
 
-const DiaryItem = ({
-  onRemove,
-  onEdit,
-  id,
-  author,
-  content,
-  emotion,
-  created_date,
-}) => {
+const DiaryItem = ({ id, author, content, emotion, created_date }) => {
+  const { onRemove, onEdit } = useContext(DiaryDispatchContext);
+
   //수정하기 isEdit : true,false분리형 값 수정중인지 아닌지 형태로 값을 분리해놓는
   const localContentInput = useRef();
   const [localContent, setLocalContent] = useState(content);
@@ -75,4 +70,4 @@ const DiaryItem = ({
     </div>
   );
 };
-export default DiaryItem;
+export default React.memo(DiaryItem);
